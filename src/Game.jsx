@@ -1,12 +1,14 @@
 import Konva from 'konva';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Layer, Stage } from 'react-konva';
+import './Game.css';
 
 function Game(){
   const [totalCorners, updateTotalCorners] = useState(3);
   const [nodes, addNode] = useState([]);
-  const [scale, updateScale] = useState(1);
   const [cornersList, setCornersList] = useState([]);
+  const [chosen, updateChosen] = useState(0);
+  const [scale, updateScale] = useState(1);
   const cornersRef = useRef([]);
   const layerRef = useRef(null);
   const width = window.innerWidth;
@@ -43,7 +45,7 @@ function Game(){
         }}
       />
     ));
-  }, [totalCorners, scale, centerX, centerY, cornerOffset]);
+  }, [totalCorners, scale, centerX, centerY, cornerOffset, chosen]);
 
   //Resets canvas
   useEffect(() => {
@@ -52,10 +54,13 @@ function Game(){
     }
     addNode([]);
 
-    const startPoint = getRandomCorner();
+    const chosenCorners = new Array(chosen);
+    const startPoint = getRandomCorner(chosenCorners);
     const pointer = { x: startPoint.x, y: startPoint.y };
     const timer = setInterval(() => { //Draws the points
-      const nextPoint = getRandomCorner();
+      const nextPoint = getRandomCorner(chosenCorners);
+      chosenCorners.push(nextPoint);
+      if(chosenCorners.length > chosen) {chosenCorners.shift();}
       pointer.x += (nextPoint.x - pointer.x) / 2;
       pointer.y += (nextPoint.y - pointer.y) / 2;
       const node = new Konva.Circle({
@@ -70,22 +75,35 @@ function Game(){
     return () => clearInterval(timer);
   }, [totalCorners, cornerOffset, cornersList]);
 
-  // const updateCornerPosition = (e) => {
-  //   e.target.x();
-  //   e.target.y();
-  // }
-
-  function getRandomCorner(){
+  function getRandomCorner(corners){
     if (cornersList.length === 0) {
       return { x: centerX, y: centerY };
     }
 
-    return cornersList[Math.floor(Math.random() * cornersList.length)];
+    let corner = cornersList[Math.floor(Math.random() * cornersList.length)];
+    while(corners.includes(corner)) {corner = cornersList[Math.floor(Math.random() * cornersList.length)];}
+    return corner
   }
 
   return (
     <div>
-      <button onClick={() => updateTotalCorners(totalCorners => totalCorners + 1)}>Add One</button>
+      <div id='controls'>
+        <label>Number of corners:
+          <input type='number' value={totalCorners} onChange={(e) => {
+            const value = e.target.value;
+            if (value <= 2) {return}
+            updateTotalCorners(value);
+          }}></input>
+        </label>
+        <label>Corner can't be chosen:
+          <input type='number' value={chosen} onChange={(e) => {
+            const value = e.target.value;
+            if (value < 0 || value > totalCorners - 1) {return;}
+            console.log("Updated?");
+            updateChosen(value);
+          }}></input>
+        </label>
+      </div>
       <Stage width={width} height={height}>
         <Layer ref={layerRef}>
           {cornerCircles}
